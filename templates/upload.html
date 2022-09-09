@@ -1,0 +1,14 @@
+{{define "header"}}
+<h1 class="mb-0">Upload a new file</h1>
+{{end}}
+
+{{define "content"}}
+<form enctype="multipart/form-data" action="/files/upload" method="POST">
+    {{.CSRF}}
+    <div class="form-group">
+        <label>File</label>
+        <input type="file" name="myFile" />
+    </div>
+    <button type="submit" class="btn btn-primary">Upload</button>
+</form>
+{{end}}
