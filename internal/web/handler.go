@@ -27,9 +27,6 @@ func NewHandler(s store.Store, s3Client *s3.S3Client, bucketName string, csrfKey
 	// add csrf protection middleware
 	h.Use(csrf.Protect(csrfKey, csrf.Secure(false))) // set security to false for development otherwise the cookie will only be sent over https
 
-	// add custom middleware to retrieve the user from the session and add it to the request context
-	// h.Use(h.withUser)
-
 	// homepage
 	h.Get("/", h.homeView())
 

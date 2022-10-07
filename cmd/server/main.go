@@ -31,14 +31,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// sessions, err := web.NewSessionManager(dsn)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
 
 	csrfKey := []byte("01234567890123456789012345678901") //32 bytes long
 	h := web.NewHandler(store, s3Client, bucketName, csrfKey)
 
-	// to avoid the error scs: no session data in context we need to wrap the web handler which in this case embeds the chi mux into the LoadAndSave middleware
 	http.ListenAndServe(":3000", h)
 }

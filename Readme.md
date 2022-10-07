@@ -1,5 +1,10 @@
-# How to use this project
+# File-server example using go and S3
+The file-server in this example project features
+1. uploading file via a web-form to a s3 server
+2. deleting of the uploaded files
+3. downloading of the uploaded files
 
+To run this project follow the instructions below.
 ## Requirements to run this project
 1. Knowing how to run go applications locally and having some basic understanding of the go cli and go modules system
 2. Having docker installed in your machine

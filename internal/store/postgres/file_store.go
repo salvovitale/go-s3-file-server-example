@@ -13,7 +13,6 @@ func NewFileStore(db *sqlx.DB) *FileStore {
 }
 
 type FileStore struct {
-	// embedded structure so we inherit all the methods from it
 	*sqlx.DB
 }
 
