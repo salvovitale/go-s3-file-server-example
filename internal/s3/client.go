@@ -21,7 +21,7 @@ func New(url string, accessKey string, secretKey string, secure bool) (*S3Client
 	return &S3Client{minioClient}, nil
 }
 
-func (s *S3Client) PutObject(bucketName, objectName string, file io.Reader, size int64) error {
+func (s *S3Client) UploadFile(bucketName, objectName string, file io.Reader, size int64) error {
 	n, err := s.Client.PutObject(context.Background(), bucketName, objectName, file, size, minio.PutObjectOptions{})
 	if err != nil {
 		log.Error().Err(err).Msg("error putting object")
@@ -29,6 +29,26 @@ func (s *S3Client) PutObject(bucketName, objectName string, file io.Reader, size
 	}
 	log.Info().Msgf("object %s uploaded successfully, size: %d", objectName, n.Size)
 	return nil
+}
+
+func (s *S3Client) RemoveFile(bucketName, objectName string) error {
+	err := s.Client.RemoveObject(context.Background(), bucketName, objectName, minio.RemoveObjectOptions{GovernanceBypass: true})
+	if err != nil {
+		log.Error().Err(err).Msg("error removing object")
+		return err
+	}
+	log.Info().Msgf("object %s removed successfully", objectName)
+	return nil
+}
+
+func (s *S3Client) DownloadFile(bucketName, objectName string) (io.Reader, error) {
+	object, err := s.Client.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
+	if err != nil {
+		log.Error().Err(err).Msg("error getting object")
+		return nil, err
+	}
+	log.Info().Msgf("object %s downloaded successfully", objectName)
+	return object, nil
 }
 
 func CreateClient(url string, accessKey string, secretKey string, secure bool) (*minio.Client, error) {

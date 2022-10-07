@@ -3,7 +3,26 @@
 {{end}}
 
 {{define "content"}}
-<p>will show here some the file already uploaded</p>
+<table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Uuid</th>
+        <th scope="col">Name</th>
+        <th scope="col">Description</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+    {{range .Files}}
+      <tr>
+        <th scope="row">{{.ID}}</td>
+        <td><a href="/files/{{.ID}}/download">{{.FileName}}</a></td>
+        <td>{{.Description}}</td>
+        <td><a href="/files/{{.ID}}/delete">Delete</a></td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
 {{end}}
 
 {{define "sidebar"}}

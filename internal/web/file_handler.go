@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/csrf"
 	"github.com/rs/zerolog/log"
@@ -14,11 +15,15 @@ import (
 )
 
 type s3FileHandler interface {
-	PutObject(bucketName, objectName string, file io.Reader, size int64) error
+	UploadFile(bucketName, objectName string, file io.Reader, size int64) error
+	RemoveFile(bucketName, objectName string) error
+	DownloadFile(bucketName, objectName string) (io.Reader, error)
 }
 
 type dbFileHandler interface {
 	StoreFile(file *store.File) error
+	DeleteFile(id uuid.UUID) error
+	File(id uuid.UUID) (store.File, error)
 }
 type FileHandler struct {
 	dbHandler  dbFileHandler
@@ -69,13 +74,91 @@ func (h *FileHandler) upload() http.HandlerFunc {
 		}
 		log.Info().Str("file-uuid", fileUUID.String()).Str("filename", handler.Filename).Msg("Stored file in db")
 
-		err = h.s3Handler.PutObject(h.bucketName, fileUUID.String(), file, handler.Size)
+		err = h.s3Handler.UploadFile(h.bucketName, fileUUID.String(), file, handler.Size)
 		if err != nil {
 			log.Err(err).Msg("Error uploading file to S3")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		log.Info().Msg("Successfully Uploaded File to S3")
+		http.Redirect(w, r, "/", http.StatusFound)
+	}
+}
+
+func (h *FileHandler) delete() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		//parse the id
+		idStr := chi.URLParam(r, "id")
+
+		//parse and validate the id
+		id, err := uuid.Parse(idStr)
+		if err != nil {
+			log.Error().Err(err).Msg("Error parsing id")
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		//delete file from db
+		if err := h.dbHandler.DeleteFile(id); err != nil {
+			log.Error().Err(err).Msg("Error deleting file from db")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// delete file from s3
+		if err := h.s3Handler.RemoveFile(h.bucketName, id.String()); err != nil {
+			log.Error().Err(err).Msg("Error deleting file from s3")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Info().Msgf("Successfully deleted file %s from s3", idStr)
+
+		// redirect to the thread list
+		http.Redirect(w, r, "/", http.StatusFound)
+	}
+}
+
+func (h *FileHandler) download() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		//parse the id
+		idStr := chi.URLParam(r, "id")
+
+		//parse and validate the id
+		id, err := uuid.Parse(idStr)
+		if err != nil {
+			log.Error().Err(err).Msg("Error parsing id")
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		//retrieve file from db
+		f, err := h.dbHandler.File(id)
+		if err != nil {
+			log.Error().Err(err).Msg("Error retrieving file from db")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// delete file from s3
+		fio, err := h.s3Handler.DownloadFile(h.bucketName, id.String())
+		if err != nil {
+			log.Error().Err(err).Msg("Error downloading file from s3")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// read file into byte array
+		fileBytes, err := ioutil.ReadAll(fio)
+		if err != nil {
+			log.Error().Err(err).Msg("Error converting file from s3 into byte array")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", f.FileName))
+		w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
+		w.Write(fileBytes)
+		// redirect to the thread list
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
 }

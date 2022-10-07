@@ -35,11 +35,10 @@ func NewHandler(s store.Store, s3Client *s3.S3Client, bucketName string, csrfKey
 
 	// sub paths
 	h.Route("/files", func(r chi.Router) {
-		// 	r.Get("/", fileHandler.listFilesView())
 		r.Get("/upload", fileHandler.uploadView())
-		// 	r.Get("/{id}", fileHandler.view())
 		r.Post("/upload", fileHandler.upload())
-		// 	r.Post("/{id}/delete", fileHandler.delete())
+		r.Get("/{id}/delete", fileHandler.delete())
+		r.Get("/{id}/download", fileHandler.download())
 	})
 
 	return h
@@ -53,8 +52,16 @@ type Handler struct {
 }
 
 func (h *Handler) homeView() http.HandlerFunc {
+	type data struct {
+		Files []store.File
+	}
 	tmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/home.html"))
 	return func(w http.ResponseWriter, r *http.Request) {
-		tmpl.Execute(w, nil)
+		ff, err := h.store.Files()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, data{Files: ff})
 	}
 }
