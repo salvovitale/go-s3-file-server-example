@@ -34,9 +34,10 @@ func (s *FileStore) File(id uuid.UUID) (store.File, error) {
 }
 
 func (s *FileStore) StoreFile(f *store.File) error {
-	if err := s.Get(f, "INSERT INTO files VALUES ($1, $2) RETURNING *",
+	if err := s.Get(f, "INSERT INTO files VALUES ($1, $2, $3) RETURNING *",
 		f.ID,
-		f.FileName); err != nil {
+		f.FileName,
+		f.Description); err != nil {
 		return fmt.Errorf("error creating File: %w", err)
 	}
 	return nil

@@ -7,16 +7,19 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gorilla/csrf"
+	"github.com/salvovitale/go-s3-file-server-example/internal/s3"
 	"github.com/salvovitale/go-s3-file-server-example/internal/store"
 )
 
-func NewHandler(s store.Store, csrfKey []byte) *Handler {
+func NewHandler(s store.Store, s3Client *s3.S3Client, bucketName string, csrfKey []byte) *Handler {
 	h := &Handler{
-		Mux:   chi.NewRouter(),
-		store: s,
+		Mux:        chi.NewRouter(),
+		store:      s,
+		s3Client:   s3Client,
+		bucketName: bucketName,
 	}
 
-	fileHandler := FileHandler{store: s}
+	fileHandler := FileHandler{dbHandler: s, s3Handler: s3Client, bucketName: bucketName}
 
 	// add logger middleware
 	h.Use(middleware.Logger)
@@ -43,8 +46,10 @@ func NewHandler(s store.Store, csrfKey []byte) *Handler {
 }
 
 type Handler struct {
-	*chi.Mux //embedded structure
-	store    store.Store
+	*chi.Mux   //embedded structure
+	store      store.Store
+	s3Client   *s3.S3Client
+	bucketName string
 }
 
 func (h *Handler) homeView() http.HandlerFunc {

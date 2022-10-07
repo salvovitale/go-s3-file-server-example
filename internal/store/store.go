@@ -3,8 +3,9 @@ package store
 import "github.com/google/uuid"
 
 type File struct {
-	ID       uuid.UUID `db:"id"`
-	FileName string    `db:"file_name"`
+	ID          uuid.UUID `db:"id"`
+	FileName    string    `db:"file_name"`
+	Description string    `db:"description"`
 }
 
 type FileStore interface {
